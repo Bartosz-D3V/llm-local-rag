@@ -1,0 +1,5 @@
+.venv/
+.ruff_cache/
+pdf_inbox/
+__pychache__
+uv.lock

@@ -1,0 +1,26 @@
+[project]
+name = "local-mcp"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Bartosz-D3V", email = "bartosz.d3v@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "fastmcp>=3.4.7",
+    "lancedb>=0.37.1",
+    "langchain-text-splitters>=1.1.2",
+    "pypdf>=6.16.2",
+    "requests>=2.34.2",
+    "ruff>=0.16.4",
+    "sentence-transformers>=6.0.0",
+    "watchdog>=6.0.0",
+]
+
+[project.scripts]
+local-mcp = "local_mcp:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
