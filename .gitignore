@@ -12,3 +12,5 @@ wheels/
 # Local data & inbox directories
 lancedb_data/
 pdf_inbox/
+
+.DS_Store/

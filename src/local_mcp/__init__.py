@@ -4,7 +4,7 @@ import sys
 from watchdog.observers import Observer
 
 from config.config import INBOX_DIR
-from local_mcp.server.server import mcp
+from local_mcp.server import mcp
 from local_rag.watcher.handler import PDFHandler
 
 
