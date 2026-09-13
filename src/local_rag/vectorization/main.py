@@ -1,18 +1,32 @@
 import sys
 from pathlib import Path
 
-from local_models.vectorizer import get_local_embedding
-from local_rag.db.lance import db
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pypdf import PdfReader
 
+from local_models.vectorizer import get_local_embedding
+from local_rag.db.lance import db
 
-def process_pdf(pdf_path: str):
-    print(f"[Ingest] Processing file: {pdf_path}", file=sys.stderr)
+
+def process_pdf(pdf_path: str, table_name: str):
+    filename = Path(pdf_path).name
+    if table_name in db.table_names():
+        table = db.open_table(table_name)
+        existing = table.search().where(f'source = "{filename}"').limit(1).to_list()
+        if existing:
+            print(
+                f"[Ingest] Skipping {filename}: already exists in table '{table_name}'.",
+                file=sys.stderr,
+            )
+            return
+
+    print(
+        f"[Ingest] Processing file: {pdf_path} → table '{table_name}'", file=sys.stderr
+    )
     reader = PdfReader(pdf_path)
 
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,  # Increased from 600 for better context
+        chunk_size=1000,
         chunk_overlap=200,
         length_function=len,
     )
@@ -50,15 +64,15 @@ def process_pdf(pdf_path: str):
         )
     ]
 
-    # Write or append to LanceDB table
-    if "documents" in db.table_names():
-        table = db.open_table("documents")
+    # Write or append to the folder-specific LanceDB table
+    if table_name in db.table_names():
+        table = db.open_table(table_name)
         table.delete(f'source = "{Path(pdf_path).name}"')
         table.add(data)
     else:
-        table = db.create_table("documents", data=data)
+        table = db.create_table(table_name, data=data)
 
     print(
-        f"[Ingest] Successfully stored {len(data)} chunks into LanceDB.",
+        f"[Ingest] Successfully stored {len(data)} chunks into table '{table_name}'.",
         file=sys.stderr,
     )

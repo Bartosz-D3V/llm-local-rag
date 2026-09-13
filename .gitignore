@@ -13,4 +13,5 @@ wheels/
 lancedb_data/
 pdf_inbox/
 
+# MacOS stuff
 .DS_Store/
