@@ -8,9 +8,9 @@ import lancedb
 from fastmcp import FastMCP
 
 from config.config import DB_DIR, INBOX_DIR
+from file.handler import PDFFileHandler
 from local_models.vectorizer import get_local_embedding
-from local_rag.vectorization.main import process_pdf
-from local_rag.watcher.handler import folder_name_to_table
+from file.watcher import folder_name_to_table
 
 
 def _make_search_tool(mcp: FastMCP, table_name: str, description: str) -> None:
@@ -66,8 +66,9 @@ def register_inbox_tools(mcp: FastMCP) -> None:
         table_name = folder_name_to_table(folder.name)
 
         # Ingest any PDFs in the folder at startup
+        pdf_handler = PDFFileHandler()
         for pdf in sorted(folder.glob("*.pdf")):
-            process_pdf(str(pdf), table_name)
+            pdf_handler.process(str(pdf), table_name)
 
         _make_search_tool(mcp, table_name, description)
         print(

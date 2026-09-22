@@ -12,8 +12,8 @@ class VectorStoreRepository(ABC):
         self,
         chunks: list[str],
         page_numbers: list[int],
-        pdf_path: str ,
-        table_name: str ,
+        pdf_path: str,
+        table_name: str,
     ) -> None:
         """Save chunks and page numbers to the vector store."""
 
@@ -31,12 +31,14 @@ class LanceDBAdapter(VectorStoreRepository):
         self,
         chunks: list[str],
         page_numbers: list[int],
-        pdf_path: str ,
-        table_name: str ,
+        pdf_path: str,
+        table_name: str,
     ) -> None:
 
         if not chunks:
-            print(f"[Ingest] Warning: No text extracted from {pdf_path}", file=sys.stderr)
+            print(
+                f"[Ingest] Warning: No text extracted from {pdf_path}", file=sys.stderr
+            )
             return
 
         if not pdf_path or not table_name:

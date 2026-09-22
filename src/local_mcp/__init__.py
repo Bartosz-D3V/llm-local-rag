@@ -5,7 +5,7 @@ from watchdog.observers.polling import PollingObserver
 
 from config.config import INBOX_DIR
 from local_mcp.server import mcp
-from local_rag.watcher.handler import PDFHandler
+from file.watcher import PDFWatcher
 
 
 def main() -> None:
@@ -15,7 +15,7 @@ def main() -> None:
 
     print("Starting PDF watcher...", file=sys.stderr)
     print(f"[*] Watching {INBOX_DIR} for new PDFs...", file=sys.stderr)
-    event_handler = PDFHandler()
+    event_handler = PDFWatcher()
     observer = PollingObserver()
     observer.schedule(event_handler, INBOX_DIR, recursive=True)
     observer.start()

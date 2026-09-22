@@ -1,48 +1,35 @@
-from abc import abstractmethod, ABC
-from dataclasses import dataclass
+import sys
+from abc import ABC, abstractmethod
+from pathlib import Path
 
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from pypdf import PdfReader
-
-@dataclass
-class FileData:
-    chunks: list[str]
-    page_numbers: list[int]
+from file.processor import PDFFileProcessorAdapter
+from local_rag.repository import LanceDBAdapter
 
 
 class FileHandler(ABC):
     @abstractmethod
-    def process(self, pdf_path: str) -> FileData:
+    def process(self, pdf_path: str, table_name: str) -> None:
         pass
 
-class PDFFileHandlerAdapter(FileHandler):
-    def process(self, pdf_path: str) -> FileData:
-        print(
-            f"[Ingest] Processing file: {pdf_path} → table '{table_name}'", file=sys.stderr
-        )
-        reader = PdfReader(pdf_path)
 
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200,
-            length_function=len,
-        )
+class PDFFileHandler(FileHandler):
+    def process(self, pdf_path: str, table_name: str) -> None:
+        filename = Path(pdf_path).name
+        repo = LanceDBAdapter()
+        if repo.exists(pdf_path=pdf_path, table_name=table_name):
+            print(
+                f"[Ingest] Skipping {filename}: already exists in table '{table_name}'.",
+                file=sys.stderr,
+            )
+            return
 
-        chunks = []
-        page_numbers = []
+        handler = PDFFileProcessorAdapter()
+        file_data = handler.process(pdf_path=pdf_path)
 
-        for page_idx, page in enumerate(reader.pages, 1):
-            page_text = page.extract_text() or ""
-            if not page_text.strip():
-                continue
-
-            # Split text for this page
-            page_chunks = text_splitter.split_text(page_text)
-            for chunk in page_chunks:
-                chunks.append(chunk)
-                page_numbers.append(page_idx)
-
-        return FileData(
-            chunks=chunks,
-            page_numbers=page_numbers
+        repo = LanceDBAdapter()
+        repo.save(
+            chunks=file_data.chunks,
+            page_numbers=file_data.page_numbers,
+            table_name=table_name,
+            pdf_path=pdf_path,
         )
