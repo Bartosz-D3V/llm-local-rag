@@ -15,3 +15,5 @@ pdf_inbox/
 
 # MacOS stuff
 .DS_Store/
+
+.idea/
