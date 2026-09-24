@@ -10,7 +10,10 @@ def folder_name_to_table(folder_name: str) -> str:
     return folder_name.lower().replace(" ", "_").replace("-", "_")
 
 
-class PDFWatcher(FileSystemEventHandler):
+class FileWatcher(FileSystemEventHandler):
+    def __init__(self, pdf_handler: PDFFileHandler) -> None:
+        self.pdf_handler = pdf_handler
+
     def on_created(self, event: FileSystemEvent) -> None:
         print(f"[Watcher] Detected new file: {event.src_path}", file=sys.stderr)
         src_path = (
@@ -33,5 +36,4 @@ class PDFWatcher(FileSystemEventHandler):
             return
 
         table_name = folder_name_to_table(folder.name)
-        pdf_handler = PDFFileHandler()
-        pdf_handler.process(str(pdf_path), table_name)
+        self.pdf_handler.process(str(pdf_path), table_name)

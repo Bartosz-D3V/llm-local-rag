@@ -2,11 +2,14 @@ import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from local_models.vectorizer import get_local_embedding
-from local_rag.db.lance import db
+from models.vectorizer import LLAMAProcessor, EmbeddingProcessor
+from rag.lance import db
 
 
 class VectorStoreRepository(ABC):
+    def __init__(self, embedding_processor: EmbeddingProcessor) -> None:
+        self.embedding_processor = embedding_processor
+
     @abstractmethod
     def save(
         self,
@@ -24,6 +27,10 @@ class VectorStoreRepository(ABC):
         table_name: str,
     ) -> bool:
         """Check if a PDF already exists in the vector store."""
+
+    @abstractmethod
+    def search(self, table_name: str, query: str, top_k: int) -> str:
+        """Search the vector store for chunks and page numbers."""
 
 
 class LanceDBAdapter(VectorStoreRepository):
@@ -44,7 +51,7 @@ class LanceDBAdapter(VectorStoreRepository):
         if not pdf_path or not table_name:
             raise ValueError("pdf_path and table_name must be provided.")
 
-        embeddings = [get_local_embedding(chunk) for chunk in chunks]
+        embeddings = [self.embedding_processor.process(chunk) for chunk in chunks]
 
         data = [
             {
@@ -87,3 +94,21 @@ class LanceDBAdapter(VectorStoreRepository):
         table = db.open_table(table_name)
         existing = table.search().where(f'source = "{filename}"').limit(1).to_list()
         return bool(existing)
+
+    def search(self, table_name: str, query: str, top_k: int = 5) -> str:
+        if table_name not in db.table_names():
+            return f"No documents indexed for '{table_name}' yet."
+
+        table = db.open_table(table_name)
+        query_vector = self.embedding_processor.process(query)
+        results = table.search(query_vector).limit(top_k).to_list()
+        if not results:
+            return "No relevant information found."
+
+        formatted = []
+        for r in results:
+            score = 1 - r.get("_distance", 0)
+            formatted.append(
+                f"--- Source: {r['source']} (relevance: {score:.2f}) ---\n{r['text']}\n"
+            )
+        return "\n".join(formatted)
