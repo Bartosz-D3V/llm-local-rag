@@ -3,14 +3,17 @@ from pathlib import Path
 
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
-from local_rag.vectorization.main import process_pdf
+from file.handler import PDFFileHandler
 
 
 def folder_name_to_table(folder_name: str) -> str:
     return folder_name.lower().replace(" ", "_").replace("-", "_")
 
 
-class PDFHandler(FileSystemEventHandler):
+class FileWatcher(FileSystemEventHandler):
+    def __init__(self, pdf_handler: PDFFileHandler) -> None:
+        self.pdf_handler = pdf_handler
+
     def on_created(self, event: FileSystemEvent) -> None:
         print(f"[Watcher] Detected new file: {event.src_path}", file=sys.stderr)
         src_path = (
@@ -33,4 +36,4 @@ class PDFHandler(FileSystemEventHandler):
             return
 
         table_name = folder_name_to_table(folder.name)
-        process_pdf(str(pdf_path), table_name)
+        self.pdf_handler.process(str(pdf_path), table_name)
