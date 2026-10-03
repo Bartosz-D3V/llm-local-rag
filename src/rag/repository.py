@@ -2,7 +2,7 @@ import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from models.vectorizer import LLAMAProcessor, EmbeddingProcessor
+from models.vectorizer import EmbeddingProcessor
 from rag.lance import db
 
 

@@ -4,7 +4,6 @@ from watchdog.observers.polling import PollingObserver
 
 from config.config import INBOX_DIR
 from file.handler import PDFFileHandler
-from file.processor import PDFFileProcessorAdapter
 from file.watcher import FileWatcher
 from models.vectorizer import LLAMAProcessor
 from rag.repository import LanceDBAdapter
@@ -15,8 +14,7 @@ if __name__ == "__main__":
     print(f"[*] Watching {INBOX_DIR} for new PDFs...", file=sys.stderr)
     embedding_processor = LLAMAProcessor()
     repository = LanceDBAdapter(embedding_processor)
-    pdf_processor = PDFFileProcessorAdapter()
-    pdf_file_handler = PDFFileHandler(repository, pdf_processor)
+    pdf_file_handler = PDFFileHandler(repository)
 
     event_handler = FileWatcher(pdf_file_handler)
     observer = PollingObserver()
