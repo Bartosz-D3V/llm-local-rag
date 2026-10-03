@@ -2,6 +2,8 @@ import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+from lancedb.rerankers import RRFReranker
+
 from models.vectorizer import EmbeddingProcessor
 from rag.lance import db
 
@@ -72,7 +74,15 @@ class LanceDBAdapter(VectorStoreRepository):
             table.delete(f'source = "{Path(table_name).name}"')
             table.add(data)
         else:
-            db.create_table(table_name, data=data)
+            table = db.create_table(table_name, data=data)
+
+        try:
+            table.create_fts_index(f"text", replace=True)
+        except Exception as e:  # noqa: BLE001
+            print(
+                f"[Ingest] Warning: Failed to create FTS index for table '{table_name}': {e}",
+                file=sys.stderr,
+            )
 
         print(
             f"[Ingest] Successfully stored {len(data)} chunks into table '{table_name}'.",
@@ -101,13 +111,25 @@ class LanceDBAdapter(VectorStoreRepository):
 
         table = db.open_table(table_name)
         query_vector = self.embedding_processor.process(query)
-        results = table.search(query_vector).limit(top_k).to_list()
+        reranker = RRFReranker()
+
+        try:
+            results = (
+                table.search(query_vector)
+                .fts(query)
+                .rerank(reranker)
+                .limit(top_k)
+                .to_list()
+            )
+        except Exception:  # noqa: BLE001
+            results = table.search(query_vector).limit(top_k).to_list()
+
         if not results:
             return "No relevant information found."
 
         formatted = []
         for r in results:
-            score = 1 - r.get("_distance", 0)
+            score = r.get("_score", 1 - r.get("_distance", 0))
             formatted.append(
                 f"--- Source: {r['source']} (relevance: {score:.2f}) ---\n{r['text']}\n"
             )
