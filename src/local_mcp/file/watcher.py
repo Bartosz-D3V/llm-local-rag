@@ -3,7 +3,7 @@ from pathlib import Path
 
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
-from file.handler import PDFFileHandler
+from local_mcp.file.factory import FileHandlerFactory
 
 
 def folder_name_to_table(folder_name: str) -> str:
@@ -11,8 +11,8 @@ def folder_name_to_table(folder_name: str) -> str:
 
 
 class FileWatcher(FileSystemEventHandler):
-    def __init__(self, pdf_handler: PDFFileHandler) -> None:
-        self.pdf_handler = pdf_handler
+    def __init__(self, file_handler: FileHandlerFactory) -> None:
+        self.file_handler = file_handler
 
     def on_created(self, event: FileSystemEvent) -> None:
         print(f"[Watcher] Detected new file: {event.src_path}", file=sys.stderr)
@@ -21,19 +21,20 @@ class FileWatcher(FileSystemEventHandler):
             if isinstance(event.src_path, bytes)
             else event.src_path
         )
-        if event.is_directory or not src_path.endswith(".pdf"):
+        if event.is_directory:
             return
 
-        pdf_path = Path(src_path)
-        folder = pdf_path.parent
+        file_path = Path(src_path)
+        folder = file_path.parent
         description_file = folder / "description.md"
 
         if not description_file.exists():
             print(
-                f"[Watcher] Skipping {pdf_path.name}: no description.md in {folder.name}",
+                f"[Watcher] Skipping {file_path.name}: no description.md in {folder.name}",
                 file=sys.stderr,
             )
             return
 
         table_name = folder_name_to_table(folder.name)
-        self.pdf_handler.process(str(pdf_path), table_name)
+        file_handler = self.file_handler.get_handler(src_path)
+        file_handler.process(str(file_path), table_name)

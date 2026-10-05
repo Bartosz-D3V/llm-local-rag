@@ -2,12 +2,13 @@ import sys
 
 from watchdog.observers.polling import PollingObserver
 
-from config.config import INBOX_DIR
-from file.handler import PDFFileHandler
-from file.watcher import FileWatcher
-from models.vectorizer import LLAMAProcessor
-from rag.repository import LanceDBAdapter
-from server.controller import MCPController
+from local_mcp.config.config import INBOX_DIR
+from local_mcp.file.factory import FileHandlerFactory
+from local_mcp.file.handler import PDFFileHandler, URLHandler
+from local_mcp.file.watcher import FileWatcher
+from local_mcp.models.vectorizer import LLAMAProcessor
+from local_mcp.rag.repository import LanceDBAdapter
+from local_mcp.server.controller import MCPController
 
 if __name__ == "__main__":
     print("Starting PDF watcher...", file=sys.stderr)
@@ -15,8 +16,10 @@ if __name__ == "__main__":
     embedding_processor = LLAMAProcessor()
     repository = LanceDBAdapter(embedding_processor)
     pdf_file_handler = PDFFileHandler(repository)
+    url_handler = URLHandler(repository)
 
-    event_handler = FileWatcher(pdf_file_handler)
+    file_handler = FileHandlerFactory(pdf_file_handler, url_handler)
+    event_handler = FileWatcher(file_handler)
     observer = PollingObserver()
     observer.schedule(event_handler, INBOX_DIR, recursive=True)
     observer.start()
