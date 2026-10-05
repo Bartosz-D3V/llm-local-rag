@@ -106,7 +106,7 @@ class URLHandler(FileHandler):
         matches = re.findall(MARKDOWN_NAME_AND_LINK_RE, index_content)
         for doc_idx, (title, link) in enumerate(matches, start=1):
             sub_url = urljoin(url, link)
-            print(f'[Ingest] Processing {title} - {link}', file=sys.stderr)
+            print(f"[Ingest] Processing {title} - {link}", file=sys.stderr)
             try:
                 sub_resp = requests.get(sub_url, timeout=10)
                 sub_resp.raise_for_status()
