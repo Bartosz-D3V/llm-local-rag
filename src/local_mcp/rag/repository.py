@@ -2,6 +2,7 @@ import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+from lancedb.index import BTree
 from lancedb.rerankers import RRFReranker
 
 from local_mcp.models.vectorizer import EmbeddingProcessor
@@ -53,7 +54,7 @@ class LanceDBAdapter(VectorStoreRepository):
         if not file_path or not table_name:
             raise ValueError("file_path and table_name must be provided.")
 
-        embeddings = [self.embedding_processor.process(chunk) for chunk in chunks]
+        embeddings = self.embedding_processor.process_batch(chunks)
 
         data = [
             {
@@ -75,6 +76,14 @@ class LanceDBAdapter(VectorStoreRepository):
             table.add(data)
         else:
             table = db.create_table(table_name, data=data)
+
+        try:
+            table.create_index("source", config=BTree(), replace=True)
+        except Exception as e:  # noqa: BLE001
+            print(
+                f"[Ingest] Warning: Failed to create scalar index on 'source' for table '{table_name}': {e}",
+                file=sys.stderr,
+            )
 
         try:
             table.create_fts_index("text", replace=True)
@@ -115,21 +124,33 @@ class LanceDBAdapter(VectorStoreRepository):
 
         try:
             results = (
-                table.search(query_vector)
-                .fts(query)
+                table.search(query_type="hybrid")
+                .vector(query_vector)
+                .text(query)
                 .rerank(reranker)
                 .limit(top_k)
                 .to_list()
             )
         except Exception:  # noqa: BLE001
-            results = table.search(query_vector).limit(top_k).to_list()
+            results = (
+                table.search(query_vector)
+                .metric("cosine")
+                .select(["source", "text", "page", "_distance"])
+                .limit(top_k)
+                .to_list()
+            )
 
         if not results:
             return "No relevant information found."
 
         formatted = []
         for r in results:
-            score = r.get("_score", 1 - r.get("_distance", 0))
+            if "_relevance_score" in r:
+                score = r["_relevance_score"]
+            elif "_distance" in r:
+                score = max(0.0, 1.0 - r["_distance"])
+            else:
+                score = r.get("_score", 0.0)
             formatted.append(
                 f"--- Source: {r['source']} (relevance: {score:.2f}) ---\n{r['text']}\n"
             )
