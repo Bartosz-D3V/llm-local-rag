@@ -5,7 +5,7 @@ from pathlib import Path
 from urllib.parse import urljoin
 
 import requests
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 from pypdf import PdfReader
 
 from local_mcp.rag.repository import LanceDBAdapter
@@ -37,8 +37,8 @@ class PDFFileHandler(FileHandler):
         reader = PdfReader(path)
 
         text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200,
+            chunk_size=2000,
+            chunk_overlap=300,
             length_function=len,
         )
 
@@ -94,10 +94,10 @@ class URLHandler(FileHandler):
             print(f"[Ingest] Error fetching {url}: {e}", file=sys.stderr)
             return
 
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200,
-            length_function=len,
+        text_splitter = RecursiveCharacterTextSplitter.from_language(
+            language=Language.MARKDOWN,
+            chunk_size=2000,
+            chunk_overlap=300,
         )
 
         chunks: list[str] = []
