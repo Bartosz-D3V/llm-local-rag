@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 import requests
-from config.config import OLLAMA_HOST
+from local_mcp.config.config import OLLAMA_HOST
 
 
 class EmbeddingProcessor(ABC):

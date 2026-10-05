@@ -4,8 +4,8 @@ from pathlib import Path
 
 from lancedb.rerankers import RRFReranker
 
-from models.vectorizer import EmbeddingProcessor
-from rag.lance import db
+from local_mcp.models.vectorizer import EmbeddingProcessor
+from local_mcp.rag.lance import db
 
 
 class VectorStoreRepository(ABC):
@@ -17,7 +17,7 @@ class VectorStoreRepository(ABC):
         self,
         chunks: list[str],
         page_numbers: list[int],
-        pdf_path: str,
+        file_path: str,
         table_name: str,
     ) -> None:
         """Save chunks and page numbers to the vector store."""
@@ -25,7 +25,7 @@ class VectorStoreRepository(ABC):
     @abstractmethod
     def exists(
         self,
-        pdf_path: str,
+        file_path: str,
         table_name: str,
     ) -> bool:
         """Check if a PDF already exists in the vector store."""
@@ -40,27 +40,27 @@ class LanceDBAdapter(VectorStoreRepository):
         self,
         chunks: list[str],
         page_numbers: list[int],
-        pdf_path: str,
+        file_path: str,
         table_name: str,
     ) -> None:
 
         if not chunks:
             print(
-                f"[Ingest] Warning: No text extracted from {pdf_path}", file=sys.stderr
+                f"[Ingest] Warning: No text extracted from {file_path}", file=sys.stderr
             )
             return
 
-        if not pdf_path or not table_name:
-            raise ValueError("pdf_path and table_name must be provided.")
+        if not file_path or not table_name:
+            raise ValueError("file_path and table_name must be provided.")
 
         embeddings = [self.embedding_processor.process(chunk) for chunk in chunks]
 
         data = [
             {
-                "id": f"{Path(pdf_path).stem}_{idx}",
+                "id": f"{Path(file_path).stem}_{idx}",
                 "vector": vec,
                 "text": chunk,
-                "source": Path(pdf_path).name,
+                "source": Path(file_path).name,
                 "page": page_num,
             }
             for idx, (chunk, vec, page_num) in enumerate(
@@ -71,13 +71,13 @@ class LanceDBAdapter(VectorStoreRepository):
         # Write or append to the folder-specific LanceDB table
         if table_name in db.table_names():
             table = db.open_table(table_name)
-            table.delete(f'source = "{Path(table_name).name}"')
+            table.delete(f'source = "{Path(file_path).name}"')
             table.add(data)
         else:
             table = db.create_table(table_name, data=data)
 
         try:
-            table.create_fts_index(f"text", replace=True)
+            table.create_fts_index("text", replace=True)
         except Exception as e:  # noqa: BLE001
             print(
                 f"[Ingest] Warning: Failed to create FTS index for table '{table_name}': {e}",
@@ -91,16 +91,16 @@ class LanceDBAdapter(VectorStoreRepository):
 
     def exists(
         self,
-        pdf_path: str,
+        file_path: str,
         table_name: str,
     ) -> bool:
-        if not pdf_path or not table_name:
+        if not file_path or not table_name:
             return False
 
         if table_name not in db.table_names():
             return False
 
-        filename = Path(pdf_path).name
+        filename = Path(file_path).name
         table = db.open_table(table_name)
         existing = table.search().where(f'source = "{filename}"').limit(1).to_list()
         return bool(existing)
