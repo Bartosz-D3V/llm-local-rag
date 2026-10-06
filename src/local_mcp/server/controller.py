@@ -86,7 +86,7 @@ class MCPController:
         return mcp
 
     def start(self):
-        transport = os.getenv("FASTMCP_TRANSPORT", "http")
+        transport = os.getenv("FASTMCP_TRANSPORT", "stdio")
         host = os.getenv("FASTMCP_HOST", "127.0.0.1")
         port = int(os.getenv("FASTMCP_PORT", "8000"))
 
