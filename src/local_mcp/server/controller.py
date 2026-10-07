@@ -55,11 +55,6 @@ class MCPController:
 
             # Process table name based on the folder name
             table_name = folder_name_to_table(folder.name)
-
-            # Ingest any PDFs in the folder at startup
-            for pdf in sorted(folder.glob("*.pdf")):
-                self.pdf_handler.process(str(pdf), table_name)
-
             self._make_search_tool(mcp, table_name, description)
             print(
                 f"[Startup] Registered tool 'search_{table_name}' for folder '{folder.name}'",
@@ -99,4 +94,4 @@ class MCPController:
             mcp.run(transport=transport, host=host, port=port)
         else:
             print("[*] Starting MCP server over stdio...", file=sys.stderr)
-            mcp.run(transport="stdio")
+            mcp.run(transport="stdio", show_banner=False)
